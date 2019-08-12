@@ -1,0 +1,119 @@
+<%-
+	local ubus = require "ubus"
+	local sys = require "luci.sys"
+	local utl = require "luci.util"
+
+	function connect_ubus(methods)
+		local result
+		local conn = ubus.connect()
+
+		if not conn then
+			error("Failed to connect to ubusd")
+		end
+
+		result = conn:call("otbr", methods, {})
+
+		return result
+	end
+
+	function threadget(action)
+		local getresult = connect_ubus(action)
+		local k, v, result
+
+		for k, v in pairs(getresult) do
+			result = v
+		end
+
+		return result
+	end
+-%>
+
+<%+header%>
+
+<h2><%:Thread Overview%></h2>
+<br />
+
+<div class="cbi-section-node">
+	<div class="table">
+		<!-- physical device -->
+		<div class="tr cbi-rowstyle-2">
+			<div class="td col-1 center middle">
+				<span class="ifacebadge"><img src="<%=resource .. "/icons/wifi.png"%>" id="wpan0" /> <%:wpan0%></span>
+			</div>
+			<div class="td col-7 left middle">
+				<big><strong><%:Generic MAC 802.15.4 Thread%></strong></big><br />
+			</div>
+			<div class="td middle cbi-section-actions">
+				<div>
+					<div></div>
+					<form action="<%=url('admin/network/thread_scan')%>" method="post">
+						<input type="submit" class="cbi-button cbi-button-action important" title="<%:Scan and join network%>" value="<%:Scan%>"/>
+					</form>
+					<form action="<%=url('admin/network/thread_scan')%>" method="post">
+						<input type="submit" class="cbi-button cbi-button-add" title="<%:Create new network%>" value="<%:Create%>"/>
+					</form>
+				</div>
+			</div>
+		</div>
+		<!-- /physical device -->
+
+		<!-- network list -->
+		<div class="tr cbi-rowstyle-1">
+			<div class="td col-1 center middle">
+			</div>
+			<div class="td col-7 left middle" id="status">
+				<% if threadget("state") == "disabled" then %>
+					<strong><%:Not connect to any Thread network%></strong><br />
+					<%: Please Join or Create a Thread network.%>
+				<% else %>
+					<strong><%:Network Name: %></strong><%=threadget("networkname")%><%: | %>
+					<strong><%:State: %></strong><%=threadget("state")%><br />
+					<strong><%:PAN ID: %></strong><%=threadget("panid")%><%:   |   %>
+					<strong><%:Channel: %></strong><%=threadget("channel")%><br />
+				<% end %>
+			</div>
+			<div class="td middle cbi-section-actions">
+				<div>
+					<% if threadget("state") ~= "disabled" then %>
+						<input type="hidden" value="0" />
+						<input name="cbi.apply" type="submit" class="cbi-button cbi-button-neutral" title="<%:Disable this network%>" value="<%:Disable%>" onclick="this.previousElementSibling.value='1'" />
+						<input type="button" class="cbi-button cbi-button-action important" title="<%:Edit this network%>" value="<%:Edit%>"/>
+						<input type="submit" class="cbi-button cbi-button-add" title="<%:View this network%>" value="<%:View%>"/>
+					<% end %>
+				</div>
+			</div>
+		</div>
+		<!-- /network list -->
+	</div>
+</div>
+
+<br />
+<h2><%:Neighbors%></h2>
+<br />
+
+<div class="cbi-map">
+	<div class="cbi-section">
+		<div class="table">
+			<div class="tr table-titles">
+				<div class="th col-2 left"><%:Network%></div>
+				<div class="th col-1 left"><%:Role%></div>
+				<div class="th col-4 left"><%:RLOC16%></div>
+				<div class="th col-2 left"><%:Age%></div>
+				<div class="th col-2 center"><%:Avg RSSI%></div>
+				<div class="th col-2 center"><%:Last RSSI%></div>
+			</div>
+			<div class="tr cbi-rowstyle-1">
+				<div class="td col-2 left"></div>
+				<div class="td col-1 left"></div>
+				<div class="td col-4 left"></div>
+				<div class="td col-2 center"></div>
+				<div class="td col-2 center"></div>
+				<div class="td col-2 center"></div>
+			</div>
+		</div>
+
+		<center><em><%:No information available%></em><br/><br />
+	</div>
+</div>
+
+<%+footer%>
