@@ -1,0 +1,156 @@
+<%-
+	local ubus = require "ubus"
+	local sys = require "luci.sys"
+	local utl = require "luci.util"
+
+	function connect_ubus(methods)
+		local result
+		local conn = ubus.connect()
+
+		if not conn then
+			error("Failed to connect to ubusd")
+		end
+
+		result = conn:call("otbr", methods, {})
+
+		return result
+	end
+
+	function scanlist()
+		local k, v, m, n
+		local l = { }
+
+		local neighbors = connect_ubus("neighbor")
+
+		for k, v in pairs(neighbors) do
+			for m, n in pairs(v) do
+				l[#l+1] = n
+			end
+		end
+
+		return l
+	end
+
+	function threadget(action)
+		local getresult = connect_ubus(action)
+		local k, v, result
+
+		for k, v in pairs(getresult) do
+			result = v
+		end
+
+		return result
+	end
+
+	function transRole(info)
+		if info == "C" then return "Child"
+		elseif info == "R" then return "Router"
+		else return "Pending"
+		end
+	end
+-%>
+
+<%+header%>
+
+<h2><%:Thread View: %><%=threadget("networkname")%><%: (wpan0)%></h2>
+<div>This is the list and topograph of your thread network.</div>
+<br />
+
+<ul class="cbi-tabmenu">
+	<li class="cbi-tab" id="listtab" style="width:15%;text-align:center;"><a href="javascript:showlist();"><%:List%></a></li>
+	<li class="cbi-tab-disabled" id="graphtab" style="width:15%;text-align:center;"><a href="javascript:showgraph();"><%:Topology Graph%></a></li>
+</ul>
+
+<!-- list div -->
+<div style="width:100%;" id="listdiv">
+	<!-- leader list -->
+	<h3><%: Leader Situation of Network%></h3><br />
+	<div class="cbi-map" style="width:90%;margin-left:5%;">
+		<div class="cbi-section">
+			<div class="table">
+				<div class="tr table-titles" style="background-color:#eee;">
+					<div class="th col-3 center"><%:Leader Router Id%></div>
+					<div class="th col-3 center"><%:Partition Id%></div>
+					<div class="th col-2 center"><%:Weighting%></div>
+					<div class="th col-2 center"><%:Data Version%></div>
+					<div class="th col-2 center"><%:Stable Data Version%></div>
+				</div>
+
+				<!-- leader situatioin -->
+				<% leader = threadget("leaderdata") %>
+				<div class="tr cbi-rowstyle-2%>" style="border:solid 1px #ddd; border-top:hidden;">
+					<div class="td col-3 center"><%=leader.LeaderRouterId%></div>
+					<div class="td col-3 center"><%=leader.PartitionId%></div>
+					<div class="td col-2 center"><%=leader.Weighting%></div>
+					<div class="td col-2 center"><%=leader.DataVersion%></div>
+					<div class="td col-2 center"><%=leader.StableDataVersion%></div>
+
+				</div>
+			</div>
+		</div>
+	</div>
+	<br />
+
+	<!-- neighbor list -->
+	<h3><%: Neighbor Situation of Network%></h3><br />
+	<div class="cbi-map" style="width:90%;margin-left:5%;">
+		<div class="cbi-section">
+			<div class="table">
+				<div class="tr table-titles" style="background-color:#eee;">
+					<div class="th col-2 center"><%:RLOC16%></div>
+					<div class="th col-2 center"><%:Role%></div>
+					<div class="th col-2 center"><%:Age%></div>
+					<div class="th col-2 center"><%:Avg RSSI%></div>
+					<div class="th col-2 center"><%:Last RSSI%></div>
+					<div class="th col-2 center"><%:Mode%></div>
+					<div class="th col-4 center"><%:Extended MAC%></div>
+				</div>
+
+				<!-- neighbor list -->
+				<% for i, neighbor in ipairs(neighborlist()) do %>
+				<div class="tr cbi-rowstyle-<%=((i-1) % 2)%>">
+					<div class="td col-2 center"><%=neighbor.Rloc16%></div>
+					<div class="td col-2 center"><%=transRole(neighbor.Role)%></div>
+					<div class="td col-2 center"><%=neighbor.Age%></div>
+					<div class="td col-2 center"><%=neighbor.AvgRssi%></div>
+					<div class="td col-2 center"><%=neighbor.LastRssi%></div>
+					<div class="td col-2 center"><%=neighbor.Mode%></div>
+					<div class="td col-4 center"><%=neighbor.ExtAddress%></div>
+				</div>
+				<% end %>
+				<!-- /neighbor list -->
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- graph div -->
+<div style="width:90%;margin-left:5%;display:none;" id="graphdiv">
+	<h1>I'm graph</h1>
+</div>
+
+<div class="cbi-page-actions right" style="margin-top:10%;">
+	<form class="inline" action="<%=url('admin/network/thread')%>" method="get">
+		<input class="cbi-button cbi-button-neutral" type="submit" value="<%:Back to overview%>" />
+	</form>
+	<form class="inline" action="<%=url('admin/network/thread_add')%>" method="post">
+		<input type="hidden" name="token" value="<%=token%>" />
+		<input class="cbi-button cbi-button-add" type="submit" value="<%:Add%>" />
+	</form>
+</div>
+<%+footer%>
+
+<script type="text/javascript">//<![CDATA[
+	function showlist() {
+		document.getElementById('listdiv').style.display = "block";
+		document.getElementById('graphdiv').style.display = "none";
+		document.getElementById('listtab').className = "cbi-tab";
+		document.getElementById('graphtab').className = "cbi-tab-disabled";
+	}
+	function showgraph() {
+		document.getElementById('listdiv').style.display = "none";
+		document.getElementById('graphdiv').style.display = "block";
+		document.getElementById('listtab').className = "cbi-tab-disabled";
+		document.getElementById('graphtab').className = "cbi-tab";
+	}
+//]]></script>

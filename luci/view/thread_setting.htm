@@ -1,0 +1,280 @@
+<%-
+	local ubus = require "ubus"
+	local sys = require "luci.sys"
+	local utl = require "luci.util"
+
+	function connect_ubus(methods)
+		local result
+		local conn = ubus.connect()
+
+		if not conn then
+			error("Failed to connect to ubusd")
+		end
+
+		result = conn:call("otbr", methods, {})
+
+		return result
+	end
+
+	function threadget(action)
+		local getresult = connect_ubus(action)
+		local k, v, result
+
+		for k, v in pairs(getresult) do
+			result = v
+		end
+
+		return result
+	end
+-%>
+<%+header%>
+
+<h2><%:Thread Network: %><%=threadget("networkname")%><%: (wpan0)%></h2>
+<div> The Network Configuration section covers physical settings of the Thread Network such as channel, PAN ID. Per interface related settings like masterkey or MAC-filter are grouped in the Interface Configuration.</div>
+<br />
+
+<form class="inline" action="<%=url('admin/network/thread_handler_setting')%>" method="post" id="settingForm">
+	<h3><%:Network Configuration%></h3>
+	<br />
+	<ul class="cbi-tabmenu">
+		<li class="cbi-tab" id="generaltab"><a href="javascript:generalSetting();"><%:General Setup%></a></li>
+		<li class="cbi-tab-disabled" id="advancedtab"><a href="javascript:advancedSetting();"><%:Advanced Settings%></a></li>
+	</ul>
+
+	<input type="hidden" name="submitcontent" id="submitcontent" />
+	<input type="hidden" name="token" value="<%=token%>" />
+	<!-- General Setup -->
+	<div style="width:80%;margin-left:10%;" id="generaldiv">
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Thread Name</label>
+			<div class="cbi-value-title">
+				<input type="text" name="threadname" value="<%=threadget("networkname")%>" style="width:30%;"/>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Status</label>
+			<div class="cbi-value-title">
+				<span class="ifacebadge large" style="padding:2%;">
+					<span>
+					<strong>PAN ID: </strong>
+						<%=threadget("panid")%>
+					<br>
+					<strong>Extended PAN ID: </strong>
+						<%=threadget("extpanid")%>
+					<br>
+					<strong>State:  </strong>
+						<%=threadget("state")%>
+					<br>
+					<strong>Channel: </strong>
+						<%=threadget("channel")%>
+					<span>
+				</span>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<% if threadget("state") == "disabled" then %>
+			<label class="cbi-value-title" style="margin-right:5%;">Thread network is disabled</label>
+			<div class="cbi-value-field">
+				<input class="cbi-button cbi-button-add" type="submit" id="enable" name="enable" value="Enable" />
+			</div>
+			<% else %>
+			<label class="cbi-value-title" style="margin-right:5%;">Thread network is enabled</label>
+			<div class="cbi-value-field">
+				<input class="cbi-button cbi-button-reset" type="submit" id="disable" name="disable" value="Disable" />
+			</div>
+			<% end %>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Protocol</label>
+			<div class="cbi-value-field">
+				<select style="width:30%;" id="protocol" name="protocol">
+					<option value>unmanaged</option>
+				</select>
+			</div>
+		</div>
+	</div>
+
+	<!-- Advanced Settings -->
+	<div style="width:70%;margin-left:10%;display:none;" id="advanceddiv">
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Channel</label>
+			<div class="cbi-value-title">
+				<input type="text" name="channel" value="<%=threadget("channel")%>" style="width:50%;"/>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">PAN ID</label>
+			<div class="cbi-value-title">
+				<input type="text" name="panid" value="<%=threadget("panid")%>" style="width:50%;"/>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Extended PAN ID</label>
+			<div class="cbi-value-title">
+				<input type="text" name="extendedpanid" value="<%=threadget("extpanid")%>" style="width:50%;"/>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Mode</label>
+			<div class="cbi-value-title">
+			<input type="text" name="mode" value="<%=threadget("mode")%>" style="width:50%;"/>
+			</div>
+		</div>
+		<div class="cbi-value" style="display:none">
+			<label class="cbi-value-title" style="margin-right:5%;">State</label>
+			<div class="cbi-value-field">
+				<select style="width:30%;" id="state" name="state" value="<%=threadget("state")%>">
+					<option value="disabled">disabled</option>
+					<option value="leader">leader</option>
+					<option value="router">router</option>
+					<option value="child">child</option>
+				</select>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">LeaderPartitionId</label>
+			<div class="cbi-value-title">
+			<input type="text" name="leaderpartitionid" value="<%=threadget("leaderpartitionid")%>" style="width:50%;"/>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Leave</label>
+			<div class="cbi-value-field">
+				<input class="cbi-button cbi-button-reset" type="submit" id="leave" name="leave" value="LEAVE" />
+			</div>
+			<div style="margin-left:30%;margin-top:1%;">
+				<span><img src="<%=resource .. "/cbi/help.gif"%>"/><%:This will delete all the existed Configuration of your thread network!%></span>
+			</div>
+		</div>
+	</div>
+
+	<h3><%:Interface Configuration%></h3>
+	<br />
+	<ul class="cbi-tabmenu">
+		<li class="cbi-tab" id="securitytab"><a href="javascript:securitySetting();"><%:Thread Security%></a></li>
+		<li class="cbi-tab-disabled" id="macfiltertab"><a href="javascript:macfilterSetting();"><%:MAC-Filter%></a></li>
+	</ul>
+	<br/>
+
+	<!-- Thread Security -->
+	<div style="width:60%;margin-left:10%;" id="securitydiv">
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Master Key</label>
+			<div class="cbi-value-title">
+				<input type="text" name="masterkey" value="<%=threadget("masterkey")%>" style="width:60%;"/>
+			</div>
+		</div>
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Network Password</label>
+			<div class="cbi-value-title">
+				<input type="text" name="password" value="<%=threadget("masterkey")%>" style="width:60%;"/>
+			</div>
+		</div>
+	</div>
+
+	<!-- MAC Filter -->
+	<div style="width:60%;margin-left:10%;display:none;" id="macfilterdiv">
+		<div class="cbi-value">
+			<label class="cbi-value-title" style="margin-right:5%;">Protocol</label>
+			<div class="cbi-value-field">
+				<select style="width:30%;" value="Disable" id="macfilterselect" name="macfilterselect" onchange='macselectchange()'>
+					<option value="Disable">Disable</option>
+					<option value="WhiteList">WhiteList</option>
+					<option value="BlackList">BlackList</option>
+				</select>
+			</div>
+		</div>
+		<div class="cbi-value" id="whitelistdiv" style="display:none;">
+			<label class="cbi-value-title" style="margin-right:5%;">Add WhiteList</label>
+			<div class="cbi-value-field">
+				<input type="text" name="whiteList" style="width:60%;"/>
+			</div>
+		</div>
+		<div class="cbi-value" id="blacklistdiv" style="display:none;">
+			<label class="cbi-value-title" style="margin-right:5%;">Add BlackList</label>
+			<div class="cbi-value-field">
+				<input type="text" name="blackList" style="width:60%;"/>
+			</div>
+		</div>
+	</div>
+	<br/>
+
+	<div class="cbi-page-actions right">
+		<input class="cbi-button cbi-button-neutral" style="float:left;" type="button" onclick="window.location.href='thread'" value="<%:Back to Overview%>" />
+		<input class="cbi-button cbi-button-apply" type="submit" id="save" value="<%:Save & Apply%>" />
+		<input class="cbi-button cbi-button-reset" type="reset" value="<%:Reset%>" />
+	</div>
+</form>
+
+<%+footer%>
+
+<script type="text/javascript">//<![CDATA[
+	var macselect = document.querySelector('#macfilterselect');
+	if(macselect) {
+		var opt = macselect.options[macselect.selectedIndex];
+		if(opt.value == "WhiteList")
+		{
+			document.getElementById('whitelistdiv').style.display = "block";
+			document.getElementById('blacklistdiv').style.display = "none";
+		}
+		else if(opt.value == "BlackList")
+		{
+			document.getElementById('blacklistdiv').style.display = "block";
+			document.getElementById('whitelistdiv').style.display = "none";
+		}
+		else
+		{
+			document.getElementById('blacklistdiv').style.display = "none";
+			document.getElementById('whitelistdiv').style.display = "none";
+		}
+	}
+	function macselectchange()
+	{
+		var macselect = document.querySelector('#macfilterselect');
+		if(macselect) {
+			var opt = macselect.options[macselect.selectedIndex];
+			if(opt.value == "WhiteList")
+			{
+				document.getElementById('whitelistdiv').style.display = "block";
+				document.getElementById('blacklistdiv').style.display = "none";
+			}
+			else if(opt.value == "BlackList")
+			{
+				document.getElementById('blacklistdiv').style.display = "block";
+				document.getElementById('whitelistdiv').style.display = "none";
+			}
+			else
+			{
+				document.getElementById('blacklistdiv').style.display = "none";
+				document.getElementById('whitelistdiv').style.display = "none";
+			}
+		}
+	}
+	function generalSetting() {
+		document.getElementById('generaldiv').style.display = "block";
+		document.getElementById('advanceddiv').style.display = "none";
+		document.getElementById('generaltab').className = "cbi-tab";
+		document.getElementById('advancedtab').className = "cbi-tab-disabled";
+	}
+	function advancedSetting() {
+		document.getElementById('generaldiv').style.display = "none";
+		document.getElementById('advanceddiv').style.display = "block";
+		document.getElementById('generaltab').className = "cbi-tab-disabled";
+		document.getElementById('advancedtab').className = "cbi-tab";
+	}
+	function securitySetting() {
+		document.getElementById('securitydiv').style.display = "block";
+		document.getElementById('macfilterdiv').style.display = "none";
+		document.getElementById('securitytab').className = "cbi-tab";
+		document.getElementById('macfiltertab').className = "cbi-tab-disabled";
+	}
+	function macfilterSetting() {
+		document.getElementById('securitydiv').style.display = "none";
+		document.getElementById('macfilterdiv').style.display = "block";
+		document.getElementById('securitytab').className = "cbi-tab-disabled";
+		document.getElementById('macfiltertab').className = "cbi-tab";
+	}
+	document.getElementById('settingForm').addEventListener('submit', function() {
+		document.getElementById('submitcontent').value = document.activeElement.id;
+	});
+//]]></script>
