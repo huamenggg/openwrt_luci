@@ -1,33 +1,3 @@
-<%-
-	local ubus = require "ubus"
-	local sys = require "luci.sys"
-	local utl = require "luci.util"
-
-
-	function connect_ubus(methods)
-		local result
-		local conn = ubus.connect()
-
-		if not conn then
-			error("Failed to connect to ubusd")
-		end
-
-		result = conn:call("otbr", methods, {})
-
-		return result
-	end
-
-	function threadget(action)
-		local getresult = connect_ubus(action)
-		local k, v, result
-
-		for k, v in pairs(getresult) do
-			result = v
-		end
-
-		return result
-	end
--%>
 <%+header%>
 
 <h2><%:Thread Overview%></h2>

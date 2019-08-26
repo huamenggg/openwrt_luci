@@ -10,6 +10,9 @@ function index()
 	page = entry({"admin", "network", "thread_neighbors"}, call("thread_neighbors"), nil)
 	page.leaf = true
 
+	page = entry({"admin", "network", "thread_graph"}, call("thread_graph"), nil)
+	page.leaf = true
+
 	page = entry({"admin", "network", "thread_scan"}, template("thread_scan"), nil)
 	page.leaf = true
 
@@ -144,10 +147,33 @@ function thread_state()
 	luci.http.write_json(result)
 end
 
+function thread_graph()
+	luci.http.prepare_content("application/json")
+
+	luci.http.write_json(networkdata())
+end
+
 function thread_neighbors()
 	luci.http.prepare_content("application/json")
 
 	luci.http.write_json(neighborlist())
+end
+
+function networkdata()
+	local k, v, m, n
+	local data = { }
+	local l = { }
+
+	local result = connect_ubus("networkdata")
+
+	for k, v in pairs(result) do
+		l[#l+1] = v
+	end
+
+	data.connect = l
+	data.state = threadget("state")
+	data.rloc = "0x1000"
+	return data
 end
 
 function neighborlist()

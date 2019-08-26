@@ -141,80 +141,70 @@
 
 <script src='http://d3js.org/d3.v3.min.js'></script>
 <script type="text/javascript">//<![CDATA[
-	var width = 1000, height = 450;
-	var nodes = [
-		{"id": "node1", "group": 3},
-		{"id": "node2", "group": 1},
-		{"id": "node3", "group": 2},
-		{"id": "node4", "group": 3},
-		{"id": "node5", "group": 1},
-		{"id": "node6", "group": 1},
-		{"id": "node7", "group": 1},
-		{"id": "node8", "group": 2},
-		{"id": "node9", "group": 2},
-		{"id": "node10", "group": 2},
-		{"id": "node11", "group": 3},
-	];
-	var links = [
-		{ source: 1, target:2 },
-		{ source: 1, target:3 },
-		{ source: 1, target:4 },
-		{ source: 1, target:5 },
-		{ source: 1, target:6 },
-		{ source: 2, target:7 },
-		{ source: 2, target:8 },
-		{ source: 2, target:9 },
-		{ source: 3, target:0 },
-		{ source: 3, target:10 },
-		{ source: 2, target:3 },
-	];
+	function update_graph()
+	{
+		d3.select("svg").remove();
+		draw_graph();
+	}
+	function draw_graph() {
+		var width = 1000, height = 400;
 
-	var svg = d3.select("#graphdiv").append("svg")
-		.attr('width', width)
-		.attr('height', height);
+		var svg = d3.select("#graphdiv").append("svg")
+			.attr('width', width)
+			.attr('height', height);
 
-	var force = d3.layout.force()
-		.size([width, height])
-		.nodes(nodes)
-		.links(links)
-		.linkDistance(100)
-		.charge([-1000]);
+		var force = d3.layout.force()
+			.size([width, height])
+			.nodes(window.nodes)
+			.links(window.links)
+			.linkDistance(100)
+			.charge([-1000]);
 
-	var link = svg.selectAll('.link')
-		.data(links)
-		.enter().append('line')
-		.style("stroke", "#ccc")
-		.style("stroke-width", 1);
+		var link = svg.selectAll('.link')
+			.data(window.links)
+			.enter().append('line')
+			.style("stroke", "#ccc")
+			.style("stroke-width", 1);
 
-	var node = svg.selectAll('.node')
-		.data(nodes)
-		.enter().append('circle')
-		.attr("r", 5)
-		.attr("fill", "#111")
-		.call(force.drag);
+		var color = d3.scale.category20();
 
-	var text = svg.selectAll("text")
-		.data(nodes)
-		.enter()
-		.append("text")
-		.style("fill", "black")
-		.attr("dx", 20)
-		.attr("dy", 8)
-		.text(function(d){
-			return d.id;
+		var node = svg.selectAll('.node')
+			.data(window.nodes)
+			.enter().append('circle')
+			.attr("r", function(d){
+				return d.role;
+			})
+			.attr("fill", function(d){
+				return color(d.group);
+			})
+			.call(force.drag);
+
+		var text = svg.selectAll("text")
+			.data(window.nodes)
+			.enter()
+			.append("text")
+			.style("fill", "black")
+			.attr("dx", 20)
+			.attr("dy", 8)
+			.text(function(d){
+				return d.rloc;
+			});
+
+		force.on("tick", function(){
+			link.attr("x1",function(d){ return d.source.x; })
+			.attr("y1",function(d){ return d.source.y; })
+			.attr("x2",function(d){ return d.target.x; })
+			.attr("y2",function(d){ return d.target.y; });
+
+			node.attr("cx",function(d){ return d.x; })
+			.attr("cy",function(d){ return d.y; });
+
+			text.attr("x",function(d){ return d.x; })
+			.attr("y",function(d){ return d.y; });
 		});
 
-	force.on("tick", function(){
-		link.attr("x1",function(d){ return d.source.x; })
-		.attr("y1",function(d){ return d.source.y; })
-		.attr("x2",function(d){ return d.target.x; })
-		.attr("y2",function(d){ return d.target.y; });
-
-		node.attr("cx",function(d){ return d.x; })
-		.attr("cy",function(d){ return d.y; });
-	});
-
-	force.start();
+		force.start();
+	}
 	function showlist() {
 		document.getElementById('listdiv').style.display = "block";
 		document.getElementById('graphdiv').style.display = "none";
@@ -226,5 +216,111 @@
 		document.getElementById('graphdiv').style.display = "block";
 		document.getElementById('listtab').className = "cbi-tab-disabled";
 		document.getElementById('graphtab').className = "cbi-tab";
+	}
+	var nodes = [
+			{"rloc": "child3-1", "group": 3, "role": 5},
+			{"rloc": "router1", "group": 1, "role": 10},
+			{"rloc": "router2", "group": 2, "role": 10},
+			{"rloc": "router3", "group": 3, "role": 10},
+			{"rloc": "child1-1", "group": 1, "role": 5},
+			{"rloc": "child1-2", "group": 1, "role": 5},
+			{"rloc": "child1-3", "group": 1, "role": 5},
+			{"rloc": "child2-1", "group": 2, "role": 5},
+			{"rloc": "child2-2", "group": 2, "role": 5},
+			{"rloc": "child2-3", "group": 2, "role": 5},
+			{"rloc": "child3-2", "group": 3, "role": 5},
+		];
+	var links = [
+			{ source: 1, target:2 },
+			{ source: 1, target:3 },
+			{ source: 1, target:4 },
+			{ source: 1, target:5 },
+			{ source: 1, target:6 },
+			{ source: 2, target:7 },
+			{ source: 2, target:8 },
+			{ source: 2, target:9 },
+			{ source: 3, target:0 },
+			{ source: 3, target:10 },
+			{ source: 2, target:3 },
+		];
+	draw_graph();
+//]]></script>
+<script type="text/javascript">//<![CDATA[
+	XHR.poll(20, '<%=url('admin/network/thread_graph')%>', null,
+		function(x, st)
+		{
+			if(st)
+			{
+				var lastnodes = window.nodes;
+				var lastlinks = window.links;
+
+				window.nodes = [];
+				window.links = [];
+
+				// get local informatioin
+				nodes.push( {
+					rloc: st.rloc,
+					group: st.rloc,
+					role: (st.state == "router" || st.state == "leader") ? 10 : 5
+				} );
+				st.connect.forEach(function(bss) {
+					bss.rloc = "0x1000";
+					var localIndex = getNodesIndex(bss.rloc);
+					if(localIndex == -1)
+					{
+						nodes.push( {
+							rloc: bss.rloc,
+							group: bss.rloc,
+							role: 10
+						} );
+						localIndex = getNodesIndex(bss.rloc);
+					}
+					bss.childdata.forEach(function(child) {
+						nodes.push( {
+							rloc: child.rloc,
+							group: bss.rloc,
+							role: 5
+						} );
+						links.push( {
+							source: localIndex,
+							target: getNodesIndex(child.rloc)
+						} );
+					});
+					bss.routedata.forEach(function(router) {
+						if(getNodesIndex(router.rloc) == -1)
+						{
+							nodes.push( {
+								rloc: router.rloc,
+								group: router.rloc,
+								role: 10
+							} );
+						}
+						links.push( {
+							source: localIndex,
+							target: getNodesIndex(router.rloc)
+						} );
+						console.log("router.rloc");
+						console.log(router.rloc);
+						console.log("getIndex(router.rloc)");
+						console.log(getNodesIndex(router.rloc));
+					});
+				});
+
+				update_graph();
+			}
+		});
+	function getNodesIndex(targetRloc)
+	{
+		var i;
+		console.log("targetRloc");
+		console.log(targetRloc);
+		for (i = 0; i < nodes.length; i++)
+		{
+			console.log("nodes[i].Rloc");
+			console.log(nodes[i].rloc);
+			if(nodes[i].rloc == targetRloc)
+				return Number(i);
+		}
+		return Number(-1);
 	}
 //]]></script>
