@@ -187,7 +187,7 @@
 			.attr("dx", 20)
 			.attr("dy", 8)
 			.text(function(d){
-				return d.rloc;
+				return (d.rloc);
 			});
 
 		force.on("tick", function(){
@@ -246,7 +246,7 @@
 	draw_graph();
 //]]></script>
 <script type="text/javascript">//<![CDATA[
-	XHR.poll(20, '<%=url('admin/network/thread_graph')%>', null,
+	XHR.poll(10, '<%=url('admin/network/thread_graph')%>', null,
 		function(x, st)
 		{
 			if(st)
@@ -258,20 +258,21 @@
 				window.links = [];
 
 				// get local informatioin
-				nodes.push( {
+				/*nodes.push( {
 					rloc: st.rloc,
 					group: st.rloc,
 					role: (st.state == "router" || st.state == "leader") ? 10 : 5
-				} );
+				} );*/
 				st.connect.forEach(function(bss) {
-					bss.rloc = "0x1000";
 					var localIndex = getNodesIndex(bss.rloc);
 					if(localIndex == -1)
 					{
+						console.log("bss.rloc");
+						console.log(parseInt(bss.rloc, 16));
 						nodes.push( {
 							rloc: bss.rloc,
 							group: bss.rloc,
-							role: 10
+							role: (parseInt(bss.rloc, 16) & 0xff) == 0 ? 10 : 5
 						} );
 						localIndex = getNodesIndex(bss.rloc);
 					}
@@ -299,10 +300,6 @@
 							source: localIndex,
 							target: getNodesIndex(router.rloc)
 						} );
-						console.log("router.rloc");
-						console.log(router.rloc);
-						console.log("getIndex(router.rloc)");
-						console.log(getNodesIndex(router.rloc));
 					});
 				});
 
