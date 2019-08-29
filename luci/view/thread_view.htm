@@ -126,7 +126,7 @@
 
 <!-- graph div -->
 <div style="width:90%;margin-left:5%;display:none;" id="graphdiv">
-	<svg></svg>
+<svg width="960" height="300"></svg>
 </div>
 
 <div class="cbi-page-actions right" style="margin-top:10%;">
@@ -140,87 +140,81 @@
 </div>
 <%+footer%>
 
-<script src='http://d3js.org/d3.v3.min.js'></script>
+<script src='http://d3js.org/d3.v4.min.js'></script>
 <script type="text/javascript">//<![CDATA[
-	function update_graph(aNodes, aLinks)
-	{
-		draw_graph(aNodes, aLinks);
-	}
-	function draw_graph(aNodes, aLinks) {
-		var width = 1000, height = 400;
+	var svg = d3.select("svg"),
+		width = +svg.attr("width"),
+		height = +svg.attr("height"),
+		color = d3.scaleOrdinal(d3.schemeCategory10);
 
-		var svg = d3.select("svg")
-			.attr('width', width)
-			.attr('height', height);
+	var nodes, links;
+	var simulation = d3.forceSimulation(nodes)
+		.force("charge", d3.forceManyBody().strength(-1000))
+		.force("link", d3.forceLink(links).distance(200))
+		.force("x", d3.forceX())
+		.force("y", d3.forceY())
+		.alphaTarget(1)
+		.on("tick", ticked);
 
-		var force = d3.layout.force()
-			.size([width, height])
-			.nodes(aNodes)
-			.links(aLinks)
-			.linkDistance(100)
-			.charge([-1000]);
+	var g = svg.append("g").attr("transform", "translate(" + width / 2 + "," + height / 2 + ")"),
+		link = g.append("g").attr("stroke", "#eee").attr("stroke-width", 1.5).selectAll(".link"),
+		node = g.append("g").attr("stroke", "#fff").attr("stroke-width", 1.5).selectAll(".node"),
+ 		text = g.append("g").selectAll(".text");
 
-		var lastlink = svg.selectAll('line');
-		var link = lastlink.data(aLinks);
-		link.exit().remove();
-		link.enter().append('line').merge(lastlink);
-
-		var color = d3.scale.category20();
-
-		var lastnode = svg.selectAll('circle');
-		var node = lastnode.data(aNodes)
-			.attr("r", function(d){
-				return (d.role == 'child' ? 5 : 10);
-			})
-			.attr("fill", function(d){
-				return color(d.role);
-			})
-			.call(force.drag);
+	function update_graph(nodes, links) {
+		node = node.data(nodes, function(d) { return d.rloc;});
 		node.exit().remove();
-		node.enter().append('circle').merge(lastnode);
-		var node = svg.selectAll('.node')
+		node = node.enter().append("circle")
+				.attr("fill", function(d) { return color(d.role); })
+				.attr("r", function(d) {
+						return (d.role == 'child' ? 5 : 10);
+				})
+				.merge(node);
 
-		/*var text = svg.selectAll("text")
-			.data(aNodes)
-			.enter()
-			.append("text")
-			.style("fill", "black")
+		link = link.data(links, function(d) { return d.source.rloc + "-" + d.target.rloc; });
+		link.exit().remove();
+		link = link.enter().append("line").merge(link);
+
+		text = text.data(nodes, function(d) { return d.rloc; });
+		text.exit().remove();
+		text = text.enter().append('text')
+			.attr("fill", "black")
 			.attr("dx", 20)
 			.attr("dy", 8)
-			.text(function(d){
-				return (d.rloc);
-			});
-*/
-		force.on("tick", function(){
-			link.attr("x1",function(d){ return d.source.x; })
-			.attr("y1",function(d){ return d.source.y; })
-			.attr("x2",function(d){ return d.target.x; })
-			.attr("y2",function(d){ return d.target.y; });
+			.text(function(d) { return d.rloc; })
+			.merge(text);
 
-			node.attr("cx",function(d){ return d.x; })
-			.attr("cy",function(d){ return d.y; });
-
-			text.attr("x",function(d){ return d.x; })
-			.attr("y",function(d){ return d.y; });
-		});
-
-		force.start();
+		simulation.nodes(nodes);
+		simulation.force("link").links(links);
+		simulation.alpha(1).restart();
 	}
+
+	function ticked() {
+		node.attr("cx", function(d) { return d.x; })
+				.attr("cy", function(d) { return d.y; })
+		link.attr("x1", function(d) { return d.source.x; })
+				.attr("y1", function(d) { return d.source.y; })
+				.attr("x2", function(d) { return d.target.x; })
+				.attr("y2", function(d) { return d.target.y; });
+		text.attr("x",function(d){ return d.x; })
+				.attr("y",function(d){ return d.y; });
+	}
+
 	function showlist() {
 		document.getElementById('listdiv').style.display = "block";
 		document.getElementById('graphdiv').style.display = "none";
 		document.getElementById('listtab').className = "cbi-tab";
 		document.getElementById('graphtab').className = "cbi-tab-disabled";
 	}
+
 	function showgraph() {
 		document.getElementById('listdiv').style.display = "none";
 		document.getElementById('graphdiv').style.display = "block";
 		document.getElementById('listtab').className = "cbi-tab-disabled";
 		document.getElementById('graphtab').className = "cbi-tab";
 	}
-//]]></script>
-<script type="text/javascript">//<![CDATA[
-	XHR.poll(10, '<%=url('admin/network/thread_graph')%>', null,
+
+	XHR.poll(5, '<%=url('admin/network/thread_graph')%>', null,
 		function(x, st)
 		{
 			if(st)
@@ -229,11 +223,6 @@
 				links = [];
 
 				// get local informatioin
-				/*nodes.push( {
-					rloc: st.rloc,
-					group: st.rloc,
-					role: (st.state == "router" || st.state == "leader") ? 10 : 5
-				} );*/
 				st.connect.forEach(function(bss) {
 					var localIndex = getNodesIndex(bss.rloc);
 					if(localIndex == -1)
@@ -276,18 +265,68 @@
 				update_graph(nodes, links);
 			}
 		});
+
 	function getNodesIndex(targetRloc)
 	{
 		var i;
-		console.log("targetRloc");
-		console.log(targetRloc);
 		for (i = 0; i < nodes.length; i++)
 		{
-			console.log("nodes[i].Rloc");
-			console.log(nodes[i].rloc);
 			if(nodes[i].rloc == targetRloc)
 				return Number(i);
 		}
 		return Number(-1);
 	}
+
+	XHR.poll(2, '<%=url('admin/network/thread_graph')%>', null,
+		function(x, st)
+		{
+			if(st)
+			{
+				nodes = [];
+				links = [];
+
+				// get local informatioin
+				st.connect.forEach(function(bss) {
+					var localIndex = getNodesIndex(bss.rloc);
+					if(localIndex == -1)
+					{
+						nodes.push( {
+							rloc: bss.rloc,
+							role: (parseInt(bss.rloc, 16) & 0xff) == 0 ? 'router' : 'child'
+						} );
+						localIndex = getNodesIndex(bss.rloc);
+					}
+					bss.childdata.forEach(function(child) {
+						var localIndex = getNodesIndex(bss.rloc);
+						if(localIndex == -1)
+						{
+							nodes.push( {
+								rloc: child.rloc,
+								role: 'child'
+							} );
+						}
+						links.push( {
+							source: localIndex,
+							target: getNodesIndex(child.rloc)
+						} );
+					});
+					bss.routedata.forEach(function(router) {
+						if(getNodesIndex(router.rloc) == -1)
+						{
+							nodes.push( {
+								rloc: router.rloc,
+								role: 'router'
+							} );
+						}
+						links.push( {
+							source: localIndex,
+							target: getNodesIndex(router.rloc)
+						} );
+					});
+				});
+
+				update_graph(nodes, links);
+			}
+		});
+
 //]]></script>
