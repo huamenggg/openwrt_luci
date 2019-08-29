@@ -160,17 +160,15 @@
 			.linkDistance(100)
 			.charge([-1000]);
 
-		var link = svg.selectAll('.link')
-			.data(aLinks)
-			.enter().append('line')
-			.style("stroke", "#ccc")
-			.style("stroke-width", 1);
+		var lastlink = svg.selectAll('line');
+		var link = lastlink.data(aLinks);
+		link.exit().remove();
+		link.enter().append('line').merge(lastlink);
 
 		var color = d3.scale.category20();
 
-		var node = svg.selectAll('.node')
-			.data(aNodes)
-			.enter().append('circle')
+		var lastnode = svg.selectAll('circle');
+		var node = lastnode.data(aNodes)
 			.attr("r", function(d){
 				return (d.role == 'child' ? 5 : 10);
 			})
@@ -178,8 +176,11 @@
 				return color(d.role);
 			})
 			.call(force.drag);
+		node.exit().remove();
+		node.enter().append('circle').merge(lastnode);
+		var node = svg.selectAll('.node')
 
-		var text = svg.selectAll("text")
+		/*var text = svg.selectAll("text")
 			.data(aNodes)
 			.enter()
 			.append("text")
@@ -189,7 +190,7 @@
 			.text(function(d){
 				return (d.rloc);
 			});
-
+*/
 		force.on("tick", function(){
 			link.attr("x1",function(d){ return d.source.x; })
 			.attr("y1",function(d){ return d.source.y; })
