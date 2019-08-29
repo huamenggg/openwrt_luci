@@ -126,6 +126,7 @@
 
 <!-- graph div -->
 <div style="width:90%;margin-left:5%;display:none;" id="graphdiv">
+	<svg></svg>
 </div>
 
 <div class="cbi-page-actions right" style="margin-top:10%;">
@@ -141,27 +142,26 @@
 
 <script src='http://d3js.org/d3.v3.min.js'></script>
 <script type="text/javascript">//<![CDATA[
-	function update_graph()
+	function update_graph(aNodes, aLinks)
 	{
-		d3.select("svg").remove();
-		draw_graph();
+		draw_graph(aNodes, aLinks);
 	}
-	function draw_graph() {
+	function draw_graph(aNodes, aLinks) {
 		var width = 1000, height = 400;
 
-		var svg = d3.select("#graphdiv").append("svg")
+		var svg = d3.select("svg")
 			.attr('width', width)
 			.attr('height', height);
 
 		var force = d3.layout.force()
 			.size([width, height])
-			.nodes(window.nodes)
-			.links(window.links)
+			.nodes(aNodes)
+			.links(aLinks)
 			.linkDistance(100)
 			.charge([-1000]);
 
 		var link = svg.selectAll('.link')
-			.data(window.links)
+			.data(aLinks)
 			.enter().append('line')
 			.style("stroke", "#ccc")
 			.style("stroke-width", 1);
@@ -169,18 +169,18 @@
 		var color = d3.scale.category20();
 
 		var node = svg.selectAll('.node')
-			.data(window.nodes)
+			.data(aNodes)
 			.enter().append('circle')
 			.attr("r", function(d){
-				return d.role;
+				return (d.role == 'child' ? 5 : 10);
 			})
 			.attr("fill", function(d){
-				return color(d.group);
+				return color(d.role);
 			})
 			.call(force.drag);
 
 		var text = svg.selectAll("text")
-			.data(window.nodes)
+			.data(aNodes)
 			.enter()
 			.append("text")
 			.style("fill", "black")
@@ -217,33 +217,6 @@
 		document.getElementById('listtab').className = "cbi-tab-disabled";
 		document.getElementById('graphtab').className = "cbi-tab";
 	}
-	var nodes = [
-			{"rloc": "child3-1", "group": 3, "role": 5},
-			{"rloc": "router1", "group": 1, "role": 10},
-			{"rloc": "router2", "group": 2, "role": 10},
-			{"rloc": "router3", "group": 3, "role": 10},
-			{"rloc": "child1-1", "group": 1, "role": 5},
-			{"rloc": "child1-2", "group": 1, "role": 5},
-			{"rloc": "child1-3", "group": 1, "role": 5},
-			{"rloc": "child2-1", "group": 2, "role": 5},
-			{"rloc": "child2-2", "group": 2, "role": 5},
-			{"rloc": "child2-3", "group": 2, "role": 5},
-			{"rloc": "child3-2", "group": 3, "role": 5},
-		];
-	var links = [
-			{ source: 1, target:2 },
-			{ source: 1, target:3 },
-			{ source: 1, target:4 },
-			{ source: 1, target:5 },
-			{ source: 1, target:6 },
-			{ source: 2, target:7 },
-			{ source: 2, target:8 },
-			{ source: 2, target:9 },
-			{ source: 3, target:0 },
-			{ source: 3, target:10 },
-			{ source: 2, target:3 },
-		];
-	draw_graph();
 //]]></script>
 <script type="text/javascript">//<![CDATA[
 	XHR.poll(10, '<%=url('admin/network/thread_graph')%>', null,
@@ -251,11 +224,8 @@
 		{
 			if(st)
 			{
-				var lastnodes = window.nodes;
-				var lastlinks = window.links;
-
-				window.nodes = [];
-				window.links = [];
+				nodes = [];
+				links = [];
 
 				// get local informatioin
 				/*nodes.push( {
@@ -267,21 +237,21 @@
 					var localIndex = getNodesIndex(bss.rloc);
 					if(localIndex == -1)
 					{
-						console.log("bss.rloc");
-						console.log(parseInt(bss.rloc, 16));
 						nodes.push( {
 							rloc: bss.rloc,
-							group: bss.rloc,
-							role: (parseInt(bss.rloc, 16) & 0xff) == 0 ? 10 : 5
+							role: (parseInt(bss.rloc, 16) & 0xff) == 0 ? 'router' : 'child'
 						} );
 						localIndex = getNodesIndex(bss.rloc);
 					}
 					bss.childdata.forEach(function(child) {
-						nodes.push( {
-							rloc: child.rloc,
-							group: bss.rloc,
-							role: 5
-						} );
+						var localIndex = getNodesIndex(bss.rloc);
+						if(localIndex == -1)
+						{
+							nodes.push( {
+								rloc: child.rloc,
+								role: 'child'
+							} );
+						}
 						links.push( {
 							source: localIndex,
 							target: getNodesIndex(child.rloc)
@@ -292,8 +262,7 @@
 						{
 							nodes.push( {
 								rloc: router.rloc,
-								group: router.rloc,
-								role: 10
+								role: 'router'
 							} );
 						}
 						links.push( {
@@ -303,7 +272,7 @@
 					});
 				});
 
-				update_graph();
+				update_graph(nodes, links);
 			}
 		});
 	function getNodesIndex(targetRloc)
