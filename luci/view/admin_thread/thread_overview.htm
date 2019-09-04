@@ -51,8 +51,7 @@
 
 <div class="table" id="neighbors">
 	<div class="tr table-titles">
-		<div class="th col-2 left"><%:Network%></div>
-		<div class="th col-2 left"><%:Signal%></div>
+		<div class="th col-2 center"><%:Signal%></div>
 		<div class="th col-1 left"><%:Role%></div>
 		<div class="th col-4 left"><%:RLOC16%></div>
 		<div class="th col-2 left"><%:Age%></div>
@@ -64,6 +63,19 @@
 	</div>
 </div>
 
+<div class="table" id="parent" style="display:none">
+	<div class="tr table-titles">
+		<div class="th col-2 center"><%:Signal%></div>
+		<div class="th col-1 left"><%:Role%></div>
+		<div class="th col-4 left"><%:RLOC16%></div>
+		<div class="th col-2 left"><%:Age%></div>
+		<div class="th col-2 left"><%:ExtAddress%></div>
+		<div class="th col-2 left"><%:LinkQualityIn%></div>
+	</div>
+	<div class="tr placeholder">
+		<div class="td"><em><%:Collecting data...%></em></div>
+	</div>
+</div>
 <%+footer%>
 
 <script type="text/javascript">//<![CDATA[
@@ -108,29 +120,27 @@
 			}
 		});
 	function percent_thread_signal(info){
-		var rssi = Number(info.AvgRssi);
+		var linkquality = Number(info.LinkQualityIn);
 
-		if (rssi <= -100)
+		if (linkquality == 0)
 			return 0;
-		else if (rssi >= -50)
-			return 100;
+		else if (linkquality == 1)
+			return 30;
+		else if(linkquality == 2)
+			return 60;
 		else
-			return math.floor(2 * (100 + rssi));
+			return 100;
 	}
 
 	function guess_thread_signal(info) {
 		var icon;
 		var scale = percent_thread_signal(info);
 
-		if (info.NetworkName == "nil")
-			icon = "<%=resource%>/icons/signal-none.png";
-		else if (scale < 15)
+		if (scale == 0)
 			icon = "<%=resource%>/icons/signal-0.png";
-		else if (scale < 35)
-			icon = "<%=resource%>/icons/signal-0-25.png";
-		else if (scale < 55)
+		else if (scale == 30)
 			icon = "<%=resource%>/icons/signal-25-50.png";
-		else if (scale < 75)
+		else if (scale == 50)
 			icon = "<%=resource%>/icons/signal-50-75.png";
 		else
 			icon = "<%=resource%>/icons/signal-75-100.png";
@@ -141,25 +151,52 @@
 	XHR.poll(2, '<%=url('admin/network/thread_neighbors')%>', null,
 		function(x, st)
 		{
-			var tb = document.getElementById('neighbors');
-			if (st && tb)
+			if(st.state == 'child')
 			{
-				var rows = [];
+				var tb = document.getElementById('parent');
+				document.getElementById('neighbors').style.display = "none";
+				document.getElementById('parent').style.display = "block";
+				if (st && tb)
+				{
+					var row = [];
 
-				st.forEach(function(bss) {
-					var icon = guess_thread_signal(bss);
-					var signal = percent_thread_signal(bss);
-					rows.push([
-						'<div class="col-2 left"><strong> %s </strong></div>'.format(bss.NetworkName),
-						'<abbr title="Signal: %s dB"><img src="%s" /><br /><small> %s%</small></abbr>'.format(bss.AvgRssi, icon, signal),
-						'<div class="col-1 left"> %s </div>'.format(bss.Role),
-						'<div class="col-4 left"> %s </div>'.format(bss.Rloc16),
-						'<div class="col-2 left"> %s </div>'.format(bss.Age),
-						'<div class="col-2 left"> %s </div>'.format(bss.AvgRssi),
-						'<div class="col-2 left"> %s </div>'.format(bss.LastRssi),
-					]);
-				});
-				cbi_update_table(tb, rows, '<center><em><%:No information available%></em></center>');
+					st.neighbor.forEach(function(bss) {
+						var icon = guess_thread_signal(bss);
+						var signal = percent_thread_signal(bss);
+						rows.push([
+							'<abbr title="LinkQualityIn: %s"><img src="%s" /><br /><small> %s%</small></abbr>'.format(bss.LinkQualityIn, icon, signal),
+							'<div class="col-1 left"> %s </div>'.format(bss.Role),
+							'<div class="col-4 left"> %s </div>'.format(bss.Rloc16),
+							'<div class="col-2 left"> %s </div>'.format(bss.Age),
+							'<div class="col-2 left"> %s </div>'.format(bss.ExtAddress),
+							'<div class="col-2 left"> %s </div>'.format(bss.LinkQualityIn),
+						]);
+					});
+					cbi_update_table(tb, rows, '<center><em><%:No information available%></em></center>');
+				}
+			}
+			else {
+				var tb = document.getElementById('neighbors');
+				document.getElementById('neighbors').style.display = "block";
+				document.getElementById('parent').style.display = "none";
+				if (st && tb)
+				{
+					var row = [];
+
+					st.neighbor.forEach(function(bss) {
+						var icon = guess_thread_signal(bss);
+						var signal = percent_thread_signal(bss);
+						rows.push([
+							'<abbr title="LinkQualityIn: %s"><img src="%s" /><br /><small> %s%</small></abbr>'.format(bss.LinkQualityIn, icon, signal),
+							'<div class="col-1 left"> %s </div>'.format(bss.Role),
+							'<div class="col-4 left"> %s </div>'.format(bss.Rloc16),
+							'<div class="col-2 left"> %s </div>'.format(bss.Age),
+							'<div class="col-2 left"> %s </div>'.format(bss.AvgRssi),
+							'<div class="col-2 left"> %s </div>'.format(bss.LastRssi),
+						]);
+					});
+					cbi_update_table(tb, rows, '<center><em><%:No information available%></em></center>');
+				}
 			}
 		});
 //]]></script>

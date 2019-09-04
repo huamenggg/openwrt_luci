@@ -16,21 +16,6 @@
 		return result
 	end
 
-	function scanlist()
-		local k, v, m, n
-		local l = { }
-
-		local neighbors = connect_ubus("neighbor")
-
-		for k, v in pairs(neighbors) do
-			for m, n in pairs(v) do
-				l[#l+1] = n
-			end
-		end
-
-		return l
-	end
-
 	function threadget(action)
 		local getresult = connect_ubus(action)
 		local k, v, result
@@ -40,13 +25,6 @@
 		end
 
 		return result
-	end
-
-	function transRole(info)
-		if info == "C" then return "Child"
-		elseif info == "R" then return "Router"
-		else return "Pending"
-		end
 	end
 -%>
 
@@ -95,7 +73,7 @@
 	<h3><%: Neighbor Situation of Network%></h3><br />
 	<div class="cbi-map" style="width:90%;margin-left:5%;">
 		<div class="cbi-section">
-			<div class="table">
+			<div class="table" id="neighbors">
 				<div class="tr table-titles" style="background-color:#eee;">
 					<div class="th col-2 center"><%:RLOC16%></div>
 					<div class="th col-2 center"><%:Role%></div>
@@ -104,20 +82,13 @@
 					<div class="th col-2 center"><%:Last RSSI%></div>
 					<div class="th col-2 center"><%:Mode%></div>
 					<div class="th col-4 center"><%:Extended MAC%></div>
+					<div class="th cbi-section-actions">&#160;</div>
 				</div>
 
 				<!-- neighbor list -->
-				<% for i, neighbor in ipairs(neighborlist()) do %>
-				<div class="tr cbi-rowstyle-<%=((i-1) % 2)%>">
-					<div class="td col-2 center"><%=neighbor.Rloc16%></div>
-					<div class="td col-2 center"><%=transRole(neighbor.Role)%></div>
-					<div class="td col-2 center"><%=neighbor.Age%></div>
-					<div class="td col-2 center"><%=neighbor.AvgRssi%></div>
-					<div class="td col-2 center"><%=neighbor.LastRssi%></div>
-					<div class="td col-2 center"><%=neighbor.Mode%></div>
-					<div class="td col-4 center"><%=neighbor.ExtAddress%></div>
+				<div class="tr placeholder">
+					<div class="td"><em><%:Collecting data...%></em></div>
 				</div>
-				<% end %>
 				<!-- /neighbor list -->
 			</div>
 		</div>
@@ -125,8 +96,9 @@
 </div>
 
 <!-- graph div -->
-<div style="width:90%;margin-left:5%;display:none;" id="graphdiv">
-<svg width="960" height="300"></svg>
+<div style="width:100%;margin-left:5%;display:none;" id="graphdiv">
+	<div style="width:20%"><svg id="topologyLegend"></svg></div>
+	<svg width="960" height="400" id="graph"></svg>
 </div>
 
 <div class="cbi-page-actions right" style="margin-top:10%;">
@@ -142,11 +114,22 @@
 
 <script src='http://d3js.org/d3.v4.min.js'></script>
 <script type="text/javascript">//<![CDATA[
-	var svg = d3.select("svg"),
+	var svg = d3.select("#graph"),
 		width = +svg.attr("width"),
 		height = +svg.attr("height"),
 		color = d3.scaleOrdinal(d3.schemeCategory10);
 
+	function getRloc(rloc, localrloc) {
+		if(rloc == localrloc) return rloc + " ( your device )";
+		else return rloc;
+	}
+	function getColor(role) {
+		if(role == 'ftd') return "#90EE90";
+		else if(role == 'mtd') return "#FFDAB9";
+		else if(role == 'router') return "#87CEFA";
+		else if(role == 'leader') return "#FFA07A";
+		else if(role == 'joiner') return "#778899";
+	}
 	var nodes, links;
 	var simulation = d3.forceSimulation(nodes)
 		.force("charge", d3.forceManyBody().strength(-1000))
@@ -161,13 +144,26 @@
 		node = g.append("g").attr("stroke", "#fff").attr("stroke-width", 1.5).selectAll(".node"),
  		text = g.append("g").selectAll(".text");
 
-	function update_graph(nodes, links) {
+	var legend = d3.select("#topologyLegend");
+
+	legend.append("circle").attr("cx",50).attr("cy",30).attr("r", 6).style("fill", getColor("leader"));
+	legend.append("circle").attr("cx",50).attr("cy",50).attr("r", 6).style("fill", getColor("router"));
+	legend.append("circle").attr("cx",50).attr("cy",70).attr("r", 4).style("fill", getColor("ftd"));
+	legend.append("circle").attr("cx",50).attr("cy",90).attr("r", 4).style("fill", getColor("mtd"));
+	legend.append("circle").attr("cx",50).attr("cy",110).attr("r", 4).style("fill", getColor("joiner"));
+	legend.append("text").attr("x", 60).attr("y", 35).text("leader").style("font-size", "15px").attr("alignment-baseline","middle");
+	legend.append("text").attr("x", 60).attr("y", 55).text("router").style("font-size", "15px").attr("alignment-baseline","middle");
+	legend.append("text").attr("x", 60).attr("y", 75).text("FTD child").style("font-size", "15px").attr("alignment-baseline","middle");
+	legend.append("text").attr("x", 60).attr("y", 95).text("MTD child").style("font-size", "15px").attr("alignment-baseline","middle");
+	legend.append("text").attr("x", 60).attr("y", 115).text("new joiner").style("font-size", "15px").attr("alignment-baseline","middle");
+
+	function update_graph(nodes, links, localrloc) {
 		node = node.data(nodes, function(d) { return d.rloc;});
 		node.exit().remove();
 		node = node.enter().append("circle")
-				.attr("fill", function(d) { return color(d.role); })
+				.attr("fill", function(d) { return getColor(d.role); })
 				.attr("r", function(d) {
-						return (d.role == 'child' ? 5 : 10);
+						return (d.role == 'router' || d.role == 'leader' ? 10 : 7);
 				})
 				.merge(node);
 
@@ -175,13 +171,13 @@
 		link.exit().remove();
 		link = link.enter().append("line").merge(link);
 
-		text = text.data(nodes, function(d) { return d.rloc; });
+		text = text.data(nodes, function(d) { return getRloc(d.rloc, localrloc); });
 		text.exit().remove();
 		text = text.enter().append('text')
 			.attr("fill", "black")
 			.attr("dx", 20)
 			.attr("dy", 8)
-			.text(function(d) { return d.rloc; })
+			.text(function(d) { return getRloc(d.rloc, localrloc); })
 			.merge(text);
 
 		simulation.nodes(nodes);
@@ -214,6 +210,13 @@
 		document.getElementById('graphtab').className = "cbi-tab";
 	}
 
+	function getRole(rloc, leader) {
+		//TODO: if local is child, then will receive message from it
+		if(parseInt(rloc) == leader) return 'leader';
+		else if((parseInt(rloc) & 0xff) == 0) return 'router';
+		else return 'child';
+	}
+
 	XHR.poll(5, '<%=url('admin/network/thread_graph')%>', null,
 		function(x, st)
 		{
@@ -222,6 +225,8 @@
 				nodes = [];
 				links = [];
 
+				var leaderRloc = st.leader << 10;
+				var localrloc = st.rloc16;
 				// get local informatioin
 				st.connect.forEach(function(bss) {
 					var localIndex = getNodesIndex(bss.rloc);
@@ -229,17 +234,16 @@
 					{
 						nodes.push( {
 							rloc: bss.rloc,
-							role: (parseInt(bss.rloc, 16) & 0xff) == 0 ? 'router' : 'child'
+							role: getRole(bss.rloc, leaderRloc)
 						} );
 						localIndex = getNodesIndex(bss.rloc);
 					}
 					bss.childdata.forEach(function(child) {
-						var localIndex = getNodesIndex(bss.rloc);
-						if(localIndex == -1)
+						if(getNodesIndex(child.rloc) == -1)
 						{
 							nodes.push( {
 								rloc: child.rloc,
-								role: 'child'
+								role: (((child.mode & 0x2) >> 1 == 1) ? 'ftd' : 'mtd')
 							} );
 						}
 						links.push( {
@@ -252,7 +256,7 @@
 						{
 							nodes.push( {
 								rloc: router.rloc,
-								role: 'router'
+								role: getRole(router.rloc, leaderRloc)
 							} );
 						}
 						links.push( {
@@ -262,7 +266,15 @@
 					});
 				});
 
-				update_graph(nodes, links);
+				var i;
+				for(i = 0;i < st.joinernum;i++) {
+					nodes.push( {
+						rloc: "new joiner" + i.toString(),
+						role: 'joiner'
+					} );
+				}
+
+				update_graph(nodes, links, localrloc);
 			}
 		});
 
@@ -277,56 +289,50 @@
 		return Number(-1);
 	}
 
-	XHR.poll(2, '<%=url('admin/network/thread_graph')%>', null,
+	XHR.poll(2, '<%=url('admin/network/thread_neighbors')%>', null,
 		function(x, st)
 		{
-			if(st)
+			var tb = document.getElementById('neighbors');
+			if (st && tb)
 			{
-				nodes = [];
-				links = [];
+				var rows = [];
 
-				// get local informatioin
-				st.connect.forEach(function(bss) {
-					var localIndex = getNodesIndex(bss.rloc);
-					if(localIndex == -1)
-					{
-						nodes.push( {
-							rloc: bss.rloc,
-							role: (parseInt(bss.rloc, 16) & 0xff) == 0 ? 'router' : 'child'
-						} );
-						localIndex = getNodesIndex(bss.rloc);
-					}
-					bss.childdata.forEach(function(child) {
-						var localIndex = getNodesIndex(bss.rloc);
-						if(localIndex == -1)
-						{
-							nodes.push( {
-								rloc: child.rloc,
-								role: 'child'
-							} );
-						}
-						links.push( {
-							source: localIndex,
-							target: getNodesIndex(child.rloc)
-						} );
-					});
-					bss.routedata.forEach(function(router) {
-						if(getNodesIndex(router.rloc) == -1)
-						{
-							nodes.push( {
-								rloc: router.rloc,
-								role: 'router'
-							} );
-						}
-						links.push( {
-							source: localIndex,
-							target: getNodesIndex(router.rloc)
-						} );
-					});
+				st.neighbor.forEach(function(bss) {
+					rows.push([
+						'<div class="col-2 center"> %s </div>'.format(bss.Rloc16),
+						'<div class="col-2 center"> %s </div>'.format(transRole(bss.Role)),
+						'<div class="col-2 center"> %s </div>'.format(bss.Age),
+						'<div class="col-2 center"> %s </div>'.format(bss.AvgRssi),
+						'<div class="col-2 center"> %s </div>'.format(bss.LastRssi),
+						'<div class="col-2 center"> %s </div>'.format(bss.Mode),
+						'<div class="col-4 center"> %s </div>'.format(bss.ExtAddress)
+					]);
 				});
-
-				update_graph(nodes, links);
+				var joiner;
+				for (joiner = 0; joiner < st.joinernum; joiner++) {
+					rows.push([
+						'<div class="col-2 center"> Pending </div>',
+						'<div class="col-2 center"> New Joiner </div>',
+						'<div class="col-2 center"> Pending </div>',
+						'<div class="col-2 center"> Pending </div>',
+						'<div class="col-2 center"> Pending </div>',
+						'<div class="col-2 center"> Pending </div>',
+						'<div class="col-4 center"> Pending </div>',
+						'<div class="th cbi-section-actions">' +
+						'<form action="<%=url('admin/network/joiner_remove')%>" method="post">' +
+							'<input type="hidden" name="token" value="<%=token%>" />' +
+							'<input class="cbi-button cbi-button-reset" type="submit" value="<%:Remove%>" />' +
+						'</form>' +
+						'</div>'
+					]);
+				}
+				cbi_update_table(tb, rows, '<center><em><%:No information available%></em></center>');
 			}
 		});
 
+		function transRole(info) {
+			if(info == "C") return 'Child';
+			else if(info == "R") return "Router";
+			else return "Pending";
+		}
 //]]></script>

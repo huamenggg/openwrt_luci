@@ -1,7 +1,7 @@
 module("luci.controller.admin.thread", package.seeall)
 
 function index()
-	page = entry({"admin", "network", "thread"}, template("thread_overview"), translate("Thread"), 16)
+	page = entry({"admin", "network", "thread"}, template("admin_thread/thread_overview"), translate("Thread"), 16)
 	page.leaf = true
 
 	page = entry({"admin", "network", "thread_state"}, call("thread_state"), nil)
@@ -13,25 +13,31 @@ function index()
 	page = entry({"admin", "network", "thread_graph"}, call("thread_graph"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_scan"}, template("thread_scan"), nil)
+	page = entry({"admin", "network", "thread_scan"}, template("admin_thread/thread_scan"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_create"}, template("thread_setting"), nil)
+	page = entry({"admin", "network", "thread_create"}, template("admin_thread/thread_setting"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_setting"}, template("thread_setting"), nil)
+	page = entry({"admin", "network", "thread_setting"}, template("admin_thread/thread_setting"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_add"}, template("thread_add"), nil)
+	page = entry({"admin", "network", "thread_add"}, template("admin_thread/thread_add"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_view"}, template("thread_view"), nil)
+	page = entry({"admin", "network", "thread_view"}, template("admin_thread/thread_view"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_join"}, template("thread_join"), nil)
+	page = entry({"admin", "network", "thread_join"}, template("admin_thread/thread_join"), nil)
+	page.leaf = true
+
+	page = entry({"admin", "network", "joiner_remove"}, post("joiner_remove"), nil)
 	page.leaf = true
 
 	page = entry({"admin", "network", "thread_attach"}, post("thread_attach"), nil)
+	page.leaf = true
+
+	page = entry({"admin", "network", "thread_add_joiner"}, post("thread_add_joiner"), nil)
 	page.leaf = true
 
 	page = entry({"admin", "network", "thread_handler_setting"}, post("thread_handler_setting"), nil)
@@ -77,12 +83,47 @@ function thread_handler_setting()
 			conn:call("otbr", "setmasterkey", { masterkey = masterkey })
 			conn:call("otbr", "threadstart", {})
 		else
-			--TODO
+			conn:call("otbr", "mgmtset", { masterkey = masterkey, networkname = networkname, extpanid = extpanid, panid = panid, channel = tostring(channel) })
 		end
 	end
 
 	local stat, dsp = pcall(require, "luci.dispatcher")
 	luci.http.redirect(stat and dsp.build_url("admin", "network", "thread"))
+end
+
+function thread_add_joiner()
+	local ubus = require "ubus"
+	local tpl = require "luci.template"
+	local http = require "luci.http"
+	local pskd = luci.http.formvalue("pskd")
+	local eui64 = luci.http.formvalue("eui64")
+
+	local conn = ubus.connect()
+
+	if not conn then
+		error("Failed to connect to ubusd")
+	end
+
+	conn:call("otbr", "commissionerstart", {})
+	conn:call("otbr", "joineradd", { pskd = pskd, eui64 = eui64})
+
+	local stat, dsp = pcall(require, "luci.dispatcher")
+	luci.http.redirect(stat and dsp.build_url("admin", "network", "thread_view"))
+end
+
+function joiner_remove()
+	local ubus = require "ubus"
+
+	local conn = ubus.connect()
+
+	if not conn then
+		error("Failed to connect to ubusd")
+	end
+
+	conn:call("otbr", "joinerremove", {})
+
+	local stat, dsp = pcall(require, "luci.dispatcher")
+	luci.http.redirect(stat and dsp.build_url("admin", "network", "thread_view"))
 end
 
 function thread_attach()
@@ -156,7 +197,13 @@ end
 function thread_neighbors()
 	luci.http.prepare_content("application/json")
 
-	luci.http.write_json(neighborlist())
+	local result = {}
+
+	result.neighbor = neighborlist()
+	result.joinernum = threadget("joinernum")
+	result.state = threadget("state")
+
+	luci.http.write_json(result)
 end
 
 function networkdata()
@@ -172,21 +219,30 @@ function networkdata()
 
 	data.connect = l
 	data.state = threadget("state")
-	data.rloc = "0x1000"
+	data.rloc16 = threadget("rloc16")
+	data.joinernum = threadget("joinernum")
+	data.leader = threadget("leaderdata").LeaderRouterId
 	return data
 end
 
 function neighborlist()
-	local k, v, m, n
+	local k, v, m, n, result
 	local l = { }
 
-	local result = connect_ubus("neighbor")
+	local state = threadget("state")
 
-	for k, v in pairs(result) do
-		for m, n in pairs(v) do
-			-- n is the table of neighborlist item
-			n.NetworkName = threadget("networkname")
-			l[#l+1] = n
+	if state == 'child' then
+		result = connect_ubus("parent")
+		for k, v in pairs(result) do
+			l[#l+1] = v
+		end
+	else
+		result = connect_ubus("neighbor")
+		for k, v in pairs(result) do
+			for m, n in pairs(v) do
+				-- n is the table of neighborlist item
+				l[#l+1] = n
+			end
 		end
 	end
 
