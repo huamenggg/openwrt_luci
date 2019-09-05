@@ -2,6 +2,7 @@
 	local ubus = require "ubus"
 	local sys = require "luci.sys"
 	local utl = require "luci.util"
+	local state = threadget("state")
 
 	function connect_ubus(methods)
 		local result
@@ -14,6 +15,22 @@
 		result = conn:call("otbr", methods, {})
 
 		return result
+	end
+
+	function addrlist()
+		local k, v, m, n
+		local l = { }
+
+		local scanresult = connect_ubus("macfilteraddr")
+
+		for k, v in pairs(scanresult) do
+			for m, n in pairs(v) do
+				-- n is the table of scanresult item
+				l[#l+1] = n
+			end
+		end
+
+		return l
 	end
 
 	function threadget(action)
@@ -115,10 +132,17 @@
 			</div>
 		</div>
 		<div class="cbi-value">
+			<% if state == 'disabled' then %>
 			<label class="cbi-value-title" style="margin-right:5%;">Mode</label>
 			<div class="cbi-value-title">
 			<input type="text" name="mode" value="<%=threadget("mode")%>" style="width:50%;"/>
 			</div>
+			<% else %>
+			<label class="cbi-value-title" style="margin-right:5%;">Mode</label>
+			<div class="cbi-value-title">
+			<input type="text" name="mode" value="<%=threadget("mode")%>" readonly="readonly" style="width:50%;"/>
+			</div>
+			<% end %>
 		</div>
 		<div class="cbi-value" style="display:none">
 			<label class="cbi-value-title" style="margin-right:5%;">State</label>
@@ -132,10 +156,17 @@
 			</div>
 		</div>
 		<div class="cbi-value">
+			<% if state == 'disabled' then %>
 			<label class="cbi-value-title" style="margin-right:5%;">LeaderPartitionId</label>
 			<div class="cbi-value-title">
 			<input type="text" name="leaderpartitionid" value="<%=threadget("leaderpartitionid")%>" style="width:50%;"/>
 			</div>
+			<% else %>
+			<label class="cbi-value-title" style="margin-right:5%;">LeaderPartitionId</label>
+			<div class="cbi-value-title">
+			<input type="text" name="leaderpartitionid" value="<%=threadget("leaderpartitionid")%>" readonly="readonly" style="width:50%;"/>
+			</div>
+			<% end %>
 		</div>
 		<div class="cbi-value">
 			<label class="cbi-value-title" style="margin-right:5%;">Leave</label>
@@ -167,7 +198,7 @@
 		<div class="cbi-value">
 			<label class="cbi-value-title" style="margin-right:5%;">Network Password</label>
 			<div class="cbi-value-title">
-				<input type="text" name="password" value="<%=threadget("masterkey")%>" style="width:60%;"/>
+				<input type="text" name="pskc" value="<%=threadget("pskc")%>" style="width:60%;"/>
 			</div>
 		</div>
 	</div>
@@ -177,55 +208,67 @@
 		<div class="cbi-value">
 			<label class="cbi-value-title" style="margin-right:5%;">Protocol</label>
 			<div class="cbi-value-field">
-				<select style="width:30%;" value="Disable" id="macfilterselect" name="macfilterselect" onchange='macselectchange()'>
-					<option value="Disable">Disable</option>
-					<option value="WhiteList">WhiteList</option>
-					<option value="BlackList">BlackList</option>
+				<select style="width:30%;" id="macfilterselect" name="macfilterselect" onchange='macselectchange()' autocomplete="off">
+					<option value="disable">Disable</option>
+					<option value="whitelist">WhiteList</option>
+					<option value="blacklist">BlackList</option>
 				</select>
 			</div>
 		</div>
-		<div class="cbi-value" id="whitelistdiv" style="display:none;">
+		<div class="cbi-value" id="macfilterlistdiv" style="display:none;">
+			<label class="cbi-value-title" style="margin-right:5%;">Existed Address</label>
+			<div class="cbi-value-field">
+				<div class="table">
+					<!-- addr list -->
+					<% for i, addr in ipairs(addrlist()) do %>
+					<div class="tr cbi-rowstyle-<%=1 + ((i-1) % 2)%>">
+						<div class="td col-2 center"><%=addr%></div>
+						<div class="td cbi-section-actions">
+							<input class="cbi-button cbi-button-reset" type="submit" value="<%:Delete%>" />
+						</div>
+					</div>
+					<% end %>
+					<!-- /addr list -->
+				</div>
+			</div>
+
 			<label class="cbi-value-title" style="margin-right:5%;">Add WhiteList</label>
 			<div class="cbi-value-field">
-				<input type="text" name="whiteList" style="width:60%;"/>
-			</div>
-		</div>
-		<div class="cbi-value" id="blacklistdiv" style="display:none;">
-			<label class="cbi-value-title" style="margin-right:5%;">Add BlackList</label>
-			<div class="cbi-value-field">
-				<input type="text" name="blackList" style="width:60%;"/>
+				<div class="table">
+					<div class="tr cbi-rowstyle-1">
+						<div class="td col-2 center"><input type="text" /></div>
+						<div class="td cbi-section-actions">
+							<input class="cbi-button cbi-button-add" type="submit" value="<%:Add%>" />
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
-	<br/>
 
 	<div class="cbi-page-actions right">
 		<input class="cbi-button cbi-button-neutral" style="float:left;" type="button" onclick="window.location.href='thread'" value="<%:Back to Overview%>" />
 		<input class="cbi-button cbi-button-apply" type="submit" id="save" value="<%:Save & Apply%>" />
 		<input class="cbi-button cbi-button-reset" type="reset" value="<%:Reset%>" />
 	</div>
+
 </form>
 
 <%+footer%>
 
 <script type="text/javascript">//<![CDATA[
+	var macfilterstate = "<%=threadget("macfilterstate")%>";
 	var macselect = document.querySelector('#macfilterselect');
 	if(macselect) {
+		macselect.value = macfilterstate;
 		var opt = macselect.options[macselect.selectedIndex];
-		if(opt.value == "WhiteList")
+		if(opt.value == "disable")
 		{
-			document.getElementById('whitelistdiv').style.display = "block";
-			document.getElementById('blacklistdiv').style.display = "none";
-		}
-		else if(opt.value == "BlackList")
-		{
-			document.getElementById('blacklistdiv').style.display = "block";
-			document.getElementById('whitelistdiv').style.display = "none";
+			document.getElementById('macfilterlistdiv').style.display = "none";
 		}
 		else
 		{
-			document.getElementById('blacklistdiv').style.display = "none";
-			document.getElementById('whitelistdiv').style.display = "none";
+			document.getElementById('macfilterlistdiv').style.display = "block";
 		}
 	}
 	function macselectchange()
@@ -233,20 +276,13 @@
 		var macselect = document.querySelector('#macfilterselect');
 		if(macselect) {
 			var opt = macselect.options[macselect.selectedIndex];
-			if(opt.value == "WhiteList")
+			if(opt.value == "disable")
 			{
-				document.getElementById('whitelistdiv').style.display = "block";
-				document.getElementById('blacklistdiv').style.display = "none";
-			}
-			else if(opt.value == "BlackList")
-			{
-				document.getElementById('blacklistdiv').style.display = "block";
-				document.getElementById('whitelistdiv').style.display = "none";
+				document.getElementById('macfilterlistdiv').style.display = "none";
 			}
 			else
 			{
-				document.getElementById('blacklistdiv').style.display = "none";
-				document.getElementById('whitelistdiv').style.display = "none";
+				document.getElementById('macfilterlistdiv').style.display = "block";
 			}
 		}
 	}

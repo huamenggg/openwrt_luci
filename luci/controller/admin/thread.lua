@@ -22,7 +22,10 @@ function index()
 	page = entry({"admin", "network", "thread_setting"}, template("admin_thread/thread_setting"), nil)
 	page.leaf = true
 
-	page = entry({"admin", "network", "thread_add"}, template("admin_thread/thread_add"), nil)
+	page = entry({"admin", "network", "thread_add"}, post("thread_add"), nil)
+	page.leaf = true
+
+	page = entry({"admin", "network", "thread_add_page"}, template("admin_thread/thread_add"), nil)
 	page.leaf = true
 
 	page = entry({"admin", "network", "thread_view"}, template("admin_thread/thread_view"), nil)
@@ -58,6 +61,8 @@ function thread_handler_setting()
 	local mode = luci.http.formvalue("mode")
 	local leaderpartitionid = luci.http.formvalue("leaderpartitionid") + 0
 	local masterkey = luci.http.formvalue("masterkey")
+	local pskc = luci.http.formvalue("pskc")
+	local macfilter = luci.http.formvalue("macfilterselect")
 	local submitcontent = luci.http.formvalue("submitcontent")
 
 	local conn = ubus.connect()
@@ -81,14 +86,34 @@ function thread_handler_setting()
 			conn:call("otbr", "setmode", { mode = mode })
 			conn:call("otbr", "setleaderpartitionid", { leaderpartitionid = leaderpartitionid })
 			conn:call("otbr", "setmasterkey", { masterkey = masterkey })
+			conn:call("otbr", "setpskc", { pskc = pskc })
 			conn:call("otbr", "threadstart", {})
+			conn:call("otbr", "macfiltersetstate", { state = macfilter })
 		else
-			conn:call("otbr", "mgmtset", { masterkey = masterkey, networkname = networkname, extpanid = extpanid, panid = panid, channel = tostring(channel) })
+			conn:call("otbr", "mgmtset", { masterkey = masterkey, networkname = networkname, extpanid = extpanid, panid = panid, channel = tostring(channel), pskc = pskc })
+			conn:call("otbr", "macfiltersetstate", { state = macfilter })
 		end
 	end
 
 	local stat, dsp = pcall(require, "luci.dispatcher")
 	luci.http.redirect(stat and dsp.build_url("admin", "network", "thread"))
+end
+
+function thread_add()
+	local ubus = require "ubus"
+	local tpl = require "luci.template"
+	local http = require "luci.http"
+
+	local conn = ubus.connect()
+
+	if not conn then
+		error("Failed to connect to ubusd")
+	end
+
+	conn:call("otbr", "commissionerstart", {})
+
+	local stat, dsp = pcall(require, "luci.dispatcher")
+	luci.http.redirect(stat and dsp.build_url("admin", "network", "thread_add_page"))
 end
 
 function thread_add_joiner()
@@ -104,7 +129,6 @@ function thread_add_joiner()
 		error("Failed to connect to ubusd")
 	end
 
-	conn:call("otbr", "commissionerstart", {})
 	conn:call("otbr", "joineradd", { pskd = pskd, eui64 = eui64})
 
 	local stat, dsp = pcall(require, "luci.dispatcher")

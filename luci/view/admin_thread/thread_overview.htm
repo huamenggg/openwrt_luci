@@ -52,25 +52,25 @@
 <div class="table" id="neighbors">
 	<div class="tr table-titles">
 		<div class="th col-2 center"><%:Signal%></div>
-		<div class="th col-1 left"><%:Role%></div>
-		<div class="th col-4 left"><%:RLOC16%></div>
-		<div class="th col-2 left"><%:Age%></div>
-		<div class="th col-2 left"><%:Avg RSSI%></div>
-		<div class="th col-2 left"><%:Last RSSI%></div>
+		<div class="th col-1 center"><%:Role%></div>
+		<div class="th col-4 center"><%:RLOC16%></div>
+		<div class="th col-2 center"><%:Age%></div>
+		<div class="th col-2 center"><%:Avg RSSI%></div>
+		<div class="th col-2 center"><%:Last RSSI%></div>
 	</div>
 	<div class="tr placeholder">
 		<div class="td"><em><%:Collecting data...%></em></div>
 	</div>
 </div>
 
-<div class="table" id="parent" style="display:none">
+<div class="table" id="parent" style="display:none;">
 	<div class="tr table-titles">
 		<div class="th col-2 center"><%:Signal%></div>
-		<div class="th col-1 left"><%:Role%></div>
-		<div class="th col-4 left"><%:RLOC16%></div>
-		<div class="th col-2 left"><%:Age%></div>
-		<div class="th col-2 left"><%:ExtAddress%></div>
-		<div class="th col-2 left"><%:LinkQualityIn%></div>
+		<div class="th col-1 center"><%:Role%></div>
+		<div class="th col-4 center"><%:RLOC16%></div>
+		<div class="th col-2 center"><%:Age%></div>
+		<div class="th col-2 center"><%:LinkQualityIn%></div>
+		<div class="th col-2 center"><%:ExtAddress%></div>
 	</div>
 	<div class="tr placeholder">
 		<div class="td"><em><%:Collecting data...%></em></div>
@@ -155,47 +155,45 @@
 			{
 				var tb = document.getElementById('parent');
 				document.getElementById('neighbors').style.display = "none";
-				document.getElementById('parent').style.display = "block";
 				if (st && tb)
 				{
-					var row = [];
-
+					var rows = [];
 					st.neighbor.forEach(function(bss) {
 						var icon = guess_thread_signal(bss);
 						var signal = percent_thread_signal(bss);
 						rows.push([
 							'<abbr title="LinkQualityIn: %s"><img src="%s" /><br /><small> %s%</small></abbr>'.format(bss.LinkQualityIn, icon, signal),
-							'<div class="col-1 left"> %s </div>'.format(bss.Role),
-							'<div class="col-4 left"> %s </div>'.format(bss.Rloc16),
-							'<div class="col-2 left"> %s </div>'.format(bss.Age),
-							'<div class="col-2 left"> %s </div>'.format(bss.ExtAddress),
-							'<div class="col-2 left"> %s </div>'.format(bss.LinkQualityIn),
+							'<div class="col-1 center"> %s </div>'.format(bss.Role),
+							'<div class="col-4 center"> %s </div>'.format(bss.Rloc16),
+							'<div class="col-2 center"> %s </div>'.format(bss.Age),
+							'<div class="col-2 center"> %s </div>'.format(bss.LinkQualityIn),
+							'<div class="col-2 center"> %s </div>'.format(bss.ExtAddress),
 						]);
 					});
 					cbi_update_table(tb, rows, '<center><em><%:No information available%></em></center>');
+					tb.style.display = "table";
 				}
 			}
 			else {
 				var tb = document.getElementById('neighbors');
-				document.getElementById('neighbors').style.display = "block";
 				document.getElementById('parent').style.display = "none";
 				if (st && tb)
 				{
-					var row = [];
-
+					var rows = [];
 					st.neighbor.forEach(function(bss) {
 						var icon = guess_thread_signal(bss);
 						var signal = percent_thread_signal(bss);
 						rows.push([
 							'<abbr title="LinkQualityIn: %s"><img src="%s" /><br /><small> %s%</small></abbr>'.format(bss.LinkQualityIn, icon, signal),
-							'<div class="col-1 left"> %s </div>'.format(bss.Role),
-							'<div class="col-4 left"> %s </div>'.format(bss.Rloc16),
-							'<div class="col-2 left"> %s </div>'.format(bss.Age),
-							'<div class="col-2 left"> %s </div>'.format(bss.AvgRssi),
-							'<div class="col-2 left"> %s </div>'.format(bss.LastRssi),
+							'<div class="col-1 center"> %s </div>'.format(bss.Role),
+							'<div class="col-4 center"> %s </div>'.format(bss.Rloc16),
+							'<div class="col-2 center"> %s </div>'.format(bss.Age),
+							'<div class="col-2 center"> %s </div>'.format(bss.AvgRssi),
+							'<div class="col-2 center"> %s </div>'.format(bss.LastRssi),
 						]);
 					});
 					cbi_update_table(tb, rows, '<center><em><%:No information available%></em></center>');
+					tb.style.display = "table";
 				}
 			}
 		});
