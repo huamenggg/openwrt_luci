@@ -63,7 +63,10 @@ function thread_handler_setting()
 	local masterkey = luci.http.formvalue("masterkey")
 	local pskc = luci.http.formvalue("pskc")
 	local macfilter = luci.http.formvalue("macfilterselect")
+	local macfilteradd = luci.http.formvalue("macfilteradd")
+	local macfilterremove = luci.http.formvalue("macfilterremove")
 	local submitcontent = luci.http.formvalue("submitcontent")
+	local jumpflag = 0
 
 	local conn = ubus.connect()
 
@@ -77,6 +80,17 @@ function thread_handler_setting()
 		conn:call("otbr", "threadstop", {})
 	elseif submitcontent == "leave" then
 		conn:call("otbr", "leave", {})
+	elseif submitcontent == "addAddr" then
+		conn:call("otbr", "macfilteradd", { addr = macfilteradd })
+		jumpflag = 1
+	elseif submitcontent == "removeAddr" then
+		if type(macfilterremove) == "table" then
+			local removeAddrIndex = luci.http.formvalue("removeAddrIndex") + 0
+			conn:call("otbr", "macfilterremove", { addr = macfilterremove[removeAddrIndex] })
+		else
+			conn:call("otbr", "macfilterremove", { addr = macfilterremove })
+		end
+		jumpflag = 1
 	else
 		if(threadget("state") == "disabled")then
 			conn:call("otbr", "setnetworkname", { networkname = networkname })
@@ -87,16 +101,21 @@ function thread_handler_setting()
 			conn:call("otbr", "setleaderpartitionid", { leaderpartitionid = leaderpartitionid })
 			conn:call("otbr", "setmasterkey", { masterkey = masterkey })
 			conn:call("otbr", "setpskc", { pskc = pskc })
-			conn:call("otbr", "threadstart", {})
 			conn:call("otbr", "macfiltersetstate", { state = macfilter })
+			conn:call("otbr", "threadstart", {})
 		else
 			conn:call("otbr", "mgmtset", { masterkey = masterkey, networkname = networkname, extpanid = extpanid, panid = panid, channel = tostring(channel), pskc = pskc })
 			conn:call("otbr", "macfiltersetstate", { state = macfilter })
 		end
 	end
 
-	local stat, dsp = pcall(require, "luci.dispatcher")
-	luci.http.redirect(stat and dsp.build_url("admin", "network", "thread"))
+	if(jumpflag == 0) then
+		local stat, dsp = pcall(require, "luci.dispatcher")
+		luci.http.redirect(stat and dsp.build_url("admin", "network", "thread"))
+	else
+		local stat, dsp = pcall(require, "luci.dispatcher")
+		luci.http.redirect(stat and dsp.build_url("admin", "network", "thread_setting"))
+	end
 end
 
 function thread_add()

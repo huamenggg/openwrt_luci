@@ -151,7 +151,7 @@
 	XHR.poll(2, '<%=url('admin/network/thread_neighbors')%>', null,
 		function(x, st)
 		{
-			if(st.state == 'child')
+			if(st && st.state == 'child')
 			{
 				var tb = document.getElementById('parent');
 				document.getElementById('neighbors').style.display = "none";
@@ -174,7 +174,7 @@
 					tb.style.display = "table";
 				}
 			}
-			else {
+			else if(st){
 				var tb = document.getElementById('neighbors');
 				document.getElementById('parent').style.display = "none";
 				if (st && tb)
