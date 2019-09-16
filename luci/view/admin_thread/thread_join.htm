@@ -4,20 +4,16 @@
 	local utl = require "luci.util"
 
 	function getmasterkey()
-		local k, v, result, masterkey
+		local k, v, result
 
 		local conn = ubus.connect()
 		if not conn then
 			error("Failed to connect to ubusd")
 		end
 
-		result = conn:call("otbr", "masterkey", {})
+		result = conn:call("otbr", "masterkey", {}).Masterkey
 
-		for k, v in pairs(result) do
-			masterkey = v
-		end
-
-		return masterkey
+		return result
 	end
 -%>
 <%+header%>

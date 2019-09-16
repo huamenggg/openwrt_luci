@@ -78,7 +78,10 @@
 </div>
 <%+footer%>
 
+<script type="text/javascript" src="/luci-static/resources/handle_error.js"></script>
 <script type="text/javascript">//<![CDATA[
+	handle_error(GetURLParameter('error'));
+
 	XHR.poll(2, '<%=url('admin/network/thread_state')%>', null,
 		function(x, st)
 		{
@@ -155,7 +158,7 @@
 			{
 				var tb = document.getElementById('parent');
 				document.getElementById('neighbors').style.display = "none";
-				if (st && tb)
+				if (tb)
 				{
 					var rows = [];
 					st.neighbor.forEach(function(bss) {
@@ -174,10 +177,11 @@
 					tb.style.display = "table";
 				}
 			}
-			else if(st){
+			else if(st)
+			{
 				var tb = document.getElementById('neighbors');
 				document.getElementById('parent').style.display = "none";
-				if (st && tb)
+				if (tb)
 				{
 					var rows = [];
 					st.neighbor.forEach(function(bss) {

@@ -18,19 +18,14 @@
 	end
 
 	function threadget(action)
-		local getresult = connect_ubus(action)
-		local k, v, result
-
-		for k, v in pairs(getresult) do
-			result = v
-		end
+		local result = connect_ubus(action)
 
 		return result
 	end
 -%>
 <%+header%>
 
-<h2><%:Add Joiner in Network: %><%=threadget("networkname")%></h2>
+<h2><%:Add Joiner in Network: %><%=threadget("networkname").NetworkName%></h2>
 <br />
 
 <br/><br/>
@@ -70,3 +65,7 @@
 </form>
 
 <%+footer%>
+<script type="text/javascript" src="/luci-static/resources/handle_error.js"></script>
+<script type="text/javascript">//<![CDATA[
+	handle_error(GetURLParameter('error'));
+//]]></script>
