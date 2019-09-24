@@ -349,7 +349,7 @@
 			var addr = document.forms["settingForm"]["macfilteradd"].value;
 			if(addr.length != 16)
 			{
-				alert("Address length must be 8 bytes");
+				alert("Address length must be 16 bytes");
 				return false;
 			}
 		}
@@ -369,7 +369,7 @@
 				return false;
 			}
 			if (extpanid.length != 16) {
-				alert("extpanid length must be 8 bytes");
+				alert("extpanid length must be 16 bytes");
 				return false;
 			}
 
@@ -395,13 +395,13 @@
 
 			var masterkey = document.forms["settingForm"]["masterkey"].value;
 			if (masterkey.length != 32) {
-				alert("Masterkey length must be 16 bytes");
+				alert("Masterkey length must be 32 bytes");
 				return false;
 			}
 
 			var pskc = document.forms["settingForm"]["pskc"].value;
 			if (pskc.length != 32) {
-				alert("Network password length must be 16 bytes");
+				alert("Network password length must be 32 bytes");
 				return false;
 			}
 		}

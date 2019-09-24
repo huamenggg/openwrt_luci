@@ -218,10 +218,9 @@
 	}
 
 	function getRole(rloc, leader) {
-		//TODO: if local is child, then will receive message from it
 		if(parseInt(rloc) == leader) return 'leader';
 		else if((parseInt(rloc) & 0xff) == 0) return 'router';
-		else return 'child';
+		else return 'ftd';
 	}
 
 	XHR.poll(5, '<%=url('admin/network/thread_graph')%>', null,
@@ -313,7 +312,7 @@
 						'<div class="col-2 center"> %s </div>'.format(transRole(bss.Role)),
 						'<div class="col-2 center"> %s </div>'.format(bss.Age),
 						'<div class="col-2 center"> %s </div>'.format(bss.LinkQualityIn),
-						'<div class="col-4 center"> %s </div>'.format(bss.ExtAddress)
+						'<div class="col-4 center"> %s </div>'.format(bss.ExtAddress),
 						]);
 					});
 					var joiner;
@@ -323,13 +322,12 @@
 						'<div class="col-2 center"> New Joiner </div>',
 						'<div class="col-2 center"> Pending </div>',
 						'<div class="col-2 center"> Pending </div>',
-						'<div class="col-2 center"> Pending </div>',
-						'<div class="col-2 center"> Pending </div>',
-						'<div class="col-4 center"> %s </div>'.format(st.joinerlist[joiner]),
+						'<div class="col-4 center"> %s </div>'.format(st.joinerlist[joiner].isAny ? "*" : st.joinerlist[joiner].eui64),
 						'<div class="th cbi-section-actions">' +
 						'<form action="<%=url('admin/network/joiner_remove')%>" method="post">' +
 							'<input type="hidden" name="token" value="<%=token%>" />' +
-							'<input type="hidden" name="eui64" value="%s" />'.format(st.joinerlist[joiner]) +
+							'<input type="hidden" name="isAny" value="%d" />'.format(st.joinerlist[joiner].isAny) +
+							'<input type="hidden" name="eui64" value="%s" />'.format(st.joinerlist[joiner].isAny ? "*" : st.joinerlist[joiner].eui64) +
 							'<input class="cbi-button cbi-button-reset" type="submit" value="<%:Remove%>" />' +
 						'</form>' +
 						'</div>'
@@ -367,11 +365,12 @@
 						'<div class="col-2 center"> Pending </div>',
 						'<div class="col-2 center"> Pending </div>',
 						'<div class="col-2 center"> Pending </div>',
-						'<div class="col-4 center"> %s </div>'.format(st.joinerlist[joiner]),
+						'<div class="col-4 center"> %s </div>'.format(st.joinerlist[joiner].isAny ? "*" : st.joinerlist[joiner].eui64),
 						'<div class="th cbi-section-actions">' +
 						'<form action="<%=url('admin/network/joiner_remove')%>" method="post">' +
 							'<input type="hidden" name="token" value="<%=token%>" />' +
-							'<input type="hidden" name="eui64" value="%s" />'.format(st.joinerlist[joiner]) +
+							'<input type="hidden" name="isAny" value="%d" />'.format(st.joinerlist[joiner].isAny) +
+							'<input type="hidden" name="eui64" value="%s" />'.format(st.joinerlist[joiner].isAny ? "*" : st.joinerlist[joiner].eui64) +
 							'<input class="cbi-button cbi-button-reset" type="submit" value="<%:Remove%>" />' +
 						'</form>' +
 						'</div>'

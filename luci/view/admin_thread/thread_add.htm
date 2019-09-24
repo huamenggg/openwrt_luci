@@ -30,7 +30,7 @@
 
 <br/><br/>
 
-<form class="inline" action="<%=url('admin/network/thread_add_joiner')%>" method="post">
+<form class="inline" action="<%=url('admin/network/thread_add_joiner')%>" method="post" id="addForm" name="addForm" onsubmit="return validateForm()">
 <div style="width:90%;margin-left:5%;">
 	<div class="cbi-value">
 		<label class="cbi-value-title" style="margin-right:5%;">New Joiner Credential</label>
@@ -68,4 +68,13 @@
 <script type="text/javascript" src="/luci-static/resources/handle_error.js"></script>
 <script type="text/javascript">//<![CDATA[
 	handle_error(GetURLParameter('error'));
+	function validateForm()
+	{
+		var eui64 = document.forms["addForm"]["eui64"].value;
+		if(eui64.length != 16 && eui64 != "*")
+		{
+			alert("eui64 length must be 16 bytes or '*'");
+			return false;
+		}
+	}
 //]]></script>

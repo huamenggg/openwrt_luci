@@ -288,7 +288,7 @@ function networkdata()
 	data.connect = l
 	data.state = threadget("state").State
 	data.rloc16 = threadget("rloc16").rloc16
-	data.joinernum = threadget("joinernum").Joinernum
+	data.joinernum = threadget("joinernum").joinernum
 	data.leader = threadget("leaderdata").leaderdata.LeaderRouterId
 	return data
 end
@@ -299,10 +299,10 @@ function joinerlist()
 	local data = { }
 
 	result = connect_ubus("joinernum")
-	data.joinernum = result.Joinernum
+	data.joinernum = result.joinernum
 
 	if result.Joinernum ~= 0 then
-		for k, v in pairs(result.joiner) do
+		for k, v in pairs(result.joiner_list) do
 			l[#l+1] = v
 		end
 	end
