@@ -86,6 +86,10 @@ function thread_handler_setting()
 	elseif submitcontent == "leave" then
 		result = conn:call("otbr", "leave", {})
 		vError = result.Error
+	elseif submitcontent == "clearAddr" then
+		result = conn:call("otbr", "macfilterclear", {})
+		vError = result.Error
+		jumpflag = 1
 	elseif submitcontent == "addAddr" then
 		result = conn:call("otbr", "macfilteradd", { addr = macfilteradd })
 		conn:call("otbr", "macfiltersetstate", { state = macfilter })

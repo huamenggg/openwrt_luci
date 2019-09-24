@@ -211,7 +211,7 @@
 	<!-- MAC Filter -->
 	<div style="width:60%;margin-left:10%;display:none;" id="macfilterdiv">
 		<div class="cbi-value">
-			<label class="cbi-value-title" style="margin-right:5%;">Protocol</label>
+			<label class="cbi-value-title" style="margin-right:1%;">Protocol</label>
 			<div class="cbi-value-field">
 				<select style="width:30%;" id="macfilterselect" name="macfilterselect" onchange='macselectchange()' autocomplete="off">
 					<option value="disable">Disable</option>
@@ -244,6 +244,13 @@
 					<% end %>
 					<% end %>
 					<!-- /addr list -->
+				</div>
+			</div>
+
+			<div class="cbi-value">
+				<div class="cbi-value-field">
+					<input class="cbi-button cbi-button-reset" type="submit" id="clearAddr" name="clearAddr" value="<%:Clear%>" />
+					<span style="margin-left:3%"><img src="<%=resource .. "/cbi/help.gif"%>" style="margin-right:2%"/><%:This will clear all existed macfilter address!%></span>
 				</div>
 			</div>
 
